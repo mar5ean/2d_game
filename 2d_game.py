@@ -4,7 +4,7 @@ import sys
 
 pygame.init()
 
-SCREEN_WIDTH, SCREEN_HEIGHT = 800, 600
+SCREEN_WIDTH, SCREEN_HEIGHT = 1600, 1200
 MAP_WIDTH, MAP_HEIGHT = 1600, 1200
 screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
 pygame.display.set_caption("Lost City: Ruin Explorer")
@@ -147,85 +147,103 @@ class Bullet:
         pygame.draw.rect(surface, (255, 200, 0), self.rect.move(-cam[0], -cam[1]))
 
 def main():
-    player = Player()
-    enemies = []
-    bullets = []
-    score = 0
-    spawn_timer = 0
-    game_over = False
     clock = pygame.time.Clock()
+    
+    while True: 
+        player = Player()
+        enemies = []
+        bullets = []
+        score = 0
+        spawn_timer = 0
+        game_over = False
+        running = True
 
-    while True:
-        cam_x = max(0, min(player.rect.centerx - SCREEN_WIDTH // 2, MAP_WIDTH - SCREEN_WIDTH))
-        cam_y = max(0, min(player.rect.centery - SCREEN_HEIGHT // 2, MAP_HEIGHT - SCREEN_HEIGHT))
-        camera = (cam_x, cam_y)
+        while running:
+            cam_x = max(0, min(player.rect.centerx - SCREEN_WIDTH // 2, MAP_WIDTH - SCREEN_WIDTH))
+            cam_y = max(0, min(player.rect.centery - SCREEN_HEIGHT // 2, MAP_HEIGHT - SCREEN_HEIGHT))
+            camera = (cam_x, cam_y)
 
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT: pygame.quit(); sys.exit()
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    pygame.quit()
+                    sys.exit()
+
+                if not game_over:
+                    if event.type == pygame.KEYDOWN and event.key == pygame.K_z:
+                        bx = player.rect.right if player.facing_right else player.rect.left
+                        bullets.append(Bullet(bx, player.rect.centery, player.facing_right))
+                else:
+                    if event.type == pygame.MOUSEBUTTONDOWN:
+                        mx, my = pygame.mouse.get_pos()
+                        if SCREEN_WIDTH//2 - 160 < mx < SCREEN_WIDTH//2 - 10:
+                            if SCREEN_HEIGHT//2 + 50 < my < SCREEN_HEIGHT//2 + 100:
+                                running = False
+                        elif SCREEN_WIDTH//2 + 10 < mx < SCREEN_WIDTH//2 + 160:
+                            if SCREEN_HEIGHT//2 + 50 < my < SCREEN_HEIGHT//2 + 100:
+                                pygame.quit()
+                                sys.exit()
+
             if not game_over:
-                if event.type == pygame.KEYDOWN and event.key == pygame.K_z:
-                    bx = player.rect.right if player.facing_right else player.rect.left
-                    bullets.append(Bullet(bx, player.rect.centery, player.facing_right))
-            else:
-                if event.type == pygame.MOUSEBUTTONDOWN:
-                    mx, my = pygame.mouse.get_pos()
-                    if SCREEN_WIDTH//2 - 150 < mx < SCREEN_WIDTH//2 + 150:
-                        if SCREEN_HEIGHT//2 + 50 < my < SCREEN_HEIGHT//2 + 100:
-                            main()
-
-        if not game_over:
-            player.update(pygame.key.get_pressed())
-            
-            spawn_timer += 1
-            if spawn_timer > 70:
-                enemies.append(Enemy(player.rect, cam_x, cam_y))
-                spawn_timer = 0
-            
-            for b in bullets[:]:
-                b.move()
-                if b.rect.x < 0 or b.rect.x > MAP_WIDTH: bullets.remove(b)
-
-            for e in enemies[:]:
-                e.move(player.rect)
-                if e.rect.colliderect(player.rect): game_over = True
+                player.update(pygame.key.get_pressed())
+                
+                spawn_timer += 1
+                if spawn_timer > 70:
+                    enemies.append(Enemy(player.rect, cam_x, cam_y))
+                    spawn_timer = 0
+                
                 for b in bullets[:]:
-                    if e.rect.colliderect(b.rect):
-                        if e in enemies: enemies.remove(e)
-                        if b in bullets: bullets.remove(b)
-                        score += 10
+                    b.move()
+                    if b.rect.x < 0 or b.rect.x > MAP_WIDTH: bullets.remove(b)
 
-        draw_background(screen, cam_x, cam_y)
-        
-        for lad in ladders:
-            pygame.draw.rect(screen, LADDER_COLOR, lad.move(-cam_x, -cam_y))
-            for s in range(lad.y + 10, lad.bottom, 20):
-                pygame.draw.line(screen, BLACK, (lad.x-cam_x, s-cam_y), (lad.right-cam_x, s-cam_y), 2)
-        
-        for p in platforms:
-            pygame.draw.rect(screen, STONE, p.move(-cam_x, -cam_y))
-            pygame.draw.rect(screen, (30, 30, 30), p.move(-cam_x, -cam_y), 2)
+                for e in enemies[:]:
+                    e.move(player.rect)
+                    if e.rect.colliderect(player.rect): 
+                        game_over = True
+                    for b in bullets[:]:
+                        if e.rect.colliderect(b.rect):
+                            if e in enemies: enemies.remove(e)
+                            if b in bullets: bullets.remove(b)
+                            score += 10
 
-        for b in bullets: b.draw(screen, camera)
-        for e in enemies: e.draw(screen, camera)
-        player.draw(screen, camera)
-
-        txt = font_ui.render(f"SCORE: {score}", True, WHITE)
-        screen.blit(txt, (20, 20))
-
-        if game_over:
-            overlay = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT))
-            overlay.set_alpha(180); overlay.fill(BLACK)
-            screen.blit(overlay, (0,0))
-            go_txt = font_msg.render("GAME OVER", True, RED)
-            screen.blit(go_txt, (SCREEN_WIDTH//2 - go_txt.get_width()//2, SCREEN_HEIGHT//2 - 60))
+            draw_background(screen, cam_x, cam_y)
             
-            btn = pygame.Rect(SCREEN_WIDTH//2 - 100, SCREEN_HEIGHT//2 + 50, 200, 50)
-            pygame.draw.rect(screen, WHITE, btn, border_radius=10)
-            res_txt = font_ui.render("RETURN", True, BLACK)
-            screen.blit(res_txt, (btn.x + 25, btn.y + 12))
+            for lad in ladders:
+                pygame.draw.rect(screen, LADDER_COLOR, lad.move(-cam_x, -cam_y))
+                for s in range(lad.y + 10, lad.bottom, 20):
+                    pygame.draw.line(screen, BLACK, (lad.x-cam_x, s-cam_y), (lad.right-cam_x, s-cam_y), 2)
+            
+            for p in platforms:
+                pygame.draw.rect(screen, STONE, p.move(-cam_x, -cam_y))
+                pygame.draw.rect(screen, (30, 30, 30), p.move(-cam_x, -cam_y), 2)
 
-        pygame.display.flip()
-        clock.tick(60)
+            for b in bullets: b.draw(screen, camera)
+            for e in enemies: e.draw(screen, camera)
+            player.draw(screen, camera)
+
+            txt = font_ui.render(f"SCORE: {score}", True, WHITE)
+            screen.blit(txt, (20, 20))
+
+            if game_over:
+                overlay = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT))
+                overlay.set_alpha(180); overlay.fill(BLACK)
+                screen.blit(overlay, (0,0))
+                go_txt = font_msg.render("GAME OVER", True, RED)
+                screen.blit(go_txt, (SCREEN_WIDTH//2 - go_txt.get_width()//2, SCREEN_HEIGHT//2 - 60))
+                
+                btn_res = pygame.Rect(SCREEN_WIDTH//2 - 160, SCREEN_HEIGHT//2 + 50, 150, 50)
+                btn_cls = pygame.Rect(SCREEN_WIDTH//2 + 10, SCREEN_HEIGHT//2 + 50, 150, 50)
+                
+                pygame.draw.rect(screen, WHITE, btn_res, border_radius=10)
+                pygame.draw.rect(screen, WHITE, btn_cls, border_radius=10)
+                
+                res_t = font_ui.render("RESTART", True, BLACK)
+                cls_t = font_ui.render("CLOSE", True, BLACK)
+                
+                screen.blit(res_t, (btn_res.centerx - res_t.get_width()//2, btn_res.y + 12))
+                screen.blit(cls_t, (btn_cls.centerx - cls_t.get_width()//2, btn_cls.y + 12))
+
+            pygame.display.flip()
+            clock.tick(60)
 
 if __name__ == "__main__":
     main()
